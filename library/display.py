@@ -147,3 +147,11 @@ def setContrast():
                 device.contrast(contrast)
                 draw.text((54, line4), "Value : " + str(contrast), font=font, fill=255)
     return contrast
+
+def screenOff():
+    # put screen off until press left
+    if SCNTYPE == 1:
+        while GPIO.input(KEY_LEFT_PIN):
+            device.hide()
+            time.sleep(0.1)
+        device.show()
