@@ -1,4 +1,8 @@
 #!/bin/bash -e
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+. "${SCRIPT_DIR}/library/shared.sh"
+
 echo "Install Luma.core drivers"
 apt update --fix-missing
 apt install -y python3-dev python3-pip \
@@ -7,12 +11,10 @@ apt install -y python3-dev python3-pip \
     dsniff nmap
 
 echo "Create directories"
-#mkdir -p /root/DeliMenu/{images,nmap}
-mkdir -p /usr/local/P4wnP1/www/loot/DeliMenu
+mkdir -p "${LOOTDIR}"
 
 echo "Updating Menu"
 cd /root/ || exit 1
-INSTALLDIR="/root/DeliMenu"
 if [[ ! -d ${INSTALLDIR} ]]; then
     echo "${INSTALLDIR} does not exist, cloning now"
     git clone https://github.com/alexdelifer/P4wnp1-ALOA-Menu-Forever.git /root/DeliMenu
