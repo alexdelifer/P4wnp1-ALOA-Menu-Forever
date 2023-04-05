@@ -1,0 +1,11 @@
+# what a mess
+
+- make a tmuxRun() to run things in bg indefinitely
+- make a tmuxKill() to kill a process based on it's pid or name?
+- fixup checklist or make a new selector, use that everywhere, instead of this mess of bespoke menus
+- fix tools like arpspoofs, responder, mitm
+
+# future
+- make a keyboard to type at least IPs/ports
+- make an interface selector menu, make tools use that
+- 

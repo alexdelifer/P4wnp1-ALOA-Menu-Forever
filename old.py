@@ -1830,14 +1830,8 @@ def getSSID():
         return ()
     cmd = "cat reportAiro-01.csv"
     res = execcmd(cmd)
-    if res == -1:
-        displayError()
-        return ()
     cmd = "rm -rf reportAiro* && rm nohup.out && rm touchedcommand.sh"
     toDEl = execcmd(cmd)
-    if toDEl == -1:
-        displayError()
-        return ()
     res = str(res).replace("\\r", "").split("\\n")
     del res[0]
     del res[0]

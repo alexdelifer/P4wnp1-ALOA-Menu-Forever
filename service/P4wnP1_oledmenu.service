@@ -1,0 +1,13 @@
+[Unit]
+Description=Start the P4wnP1 Oled Menu
+Before=basic.target
+After=local-fs.target sysinit.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/DeliMenu
+ExecStart=python3 new.py
+
+[Install]
+WantedBy=basic.target
