@@ -1551,7 +1551,7 @@ def systemInfo():
 
 def menuResponderAttack():
     print("Responder")
-    interface = ""
+    interface = None
     while GPIO.input(KEY_LEFT_PIN):
         responder_status = checkResponder()
 
@@ -1559,7 +1559,7 @@ def menuResponderAttack():
             "Interface: " + str(interface): selectNetworkInterface,
         }
 
-        if interface != "":
+        if interface is not None:
             menu_responder["Run"] = runResponder
 
         print(responder_status)
