@@ -2,6 +2,9 @@ import subprocess
 from library import display
 import time
 
+installDir = "/root/DeliMenu"
+lootDir = "/usr/local/P4wnP1/www/loot/DeliMenu"
+
 def execCmd(cmd: str, skipError=False):
     result = None
     try:
