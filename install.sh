@@ -20,11 +20,7 @@ if [[ ! -d ${INSTALLDIR} ]]; then
     git clone https://github.com/alexdelifer/P4wnp1-ALOA-Menu-Forever.git /root/DeliMenu
 
 else
-    cd "${INSTALLDIR}" || exit 2
-    git stash || exit 3
-    git pull || exit 4
-    git stash pop || exit 5
-
+    "${INSTALLDIR}/update.sh"
 fi
 
 echo "Updating Service"
